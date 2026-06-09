@@ -41,7 +41,7 @@ native on a phone.
 | Concern        | Choice                                              |
 | -------------- | --------------------------------------------------- |
 | Framework      | React 18 + TypeScript + Vite 6                      |
-| Map            | MapLibre GL JS + OpenFreeMap vector tiles           |
+| Map            | MapLibre GL JS + OpenFreeMap or MapTiler vector tiles |
 | State          | Zustand (persisted to localStorage)                 |
 | Storage        | IndexedDB (type catalog) via `idb-keyval`           |
 | PWA            | `vite-plugin-pwa` (Workbox)                         |
@@ -84,6 +84,12 @@ npm run dev          # http://localhost:5173
 No configuration is required — the app falls back to the public Falling Fruit
 production API key. To use your own key, copy `.env.example` to `.env` and set
 `FF_API_KEY`.
+
+**Basemap (optional):** by default the map uses the free, keyless
+[OpenFreeMap](https://openfreemap.org) styles. Set `VITE_MAPTILER_KEY` (a free
+[MapTiler](https://www.maptiler.com) key) to switch to MapTiler's nicer styles
+— in dev via `.env`, in production as a plain build env var on Cloudflare Pages.
+The key is restricted to your domain(s) in the MapTiler dashboard.
 
 Other scripts:
 

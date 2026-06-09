@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
-  BASEMAP_STYLES,
+  basemapStyleUrl,
   DEFAULT_VIEW,
   INDIVIDUAL_ZOOM,
   LOCATION_LIMIT,
@@ -116,7 +116,9 @@ function addSourcesAndLayers(map: maplibregl.Map) {
       id: 'locations-label',
       type: 'symbol',
       source: 'locations',
-      minzoom: 16,
+      // Names only appear when zoomed in close, and collision padding lets the
+      // label engine thin them out so dense blocks stay readable.
+      minzoom: 17,
       layout: {
         'text-field': ['get', 'name'],
         'text-font': ['Noto Sans Regular'],
@@ -124,6 +126,9 @@ function addSourcesAndLayers(map: maplibregl.Map) {
         'text-offset': [0, 1.1],
         'text-anchor': 'top',
         'text-optional': true,
+        'text-allow-overlap': false,
+        'text-padding': 10,
+        'text-max-width': 7,
       },
       paint: {
         'text-color': '#2a2d22',
@@ -163,7 +168,7 @@ export default function MapView() {
     if (!containerRef.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: BASEMAP_STYLES[useStore.getState().settings.basemap],
+      style: basemapStyleUrl(useStore.getState().settings.basemap),
       center: [DEFAULT_VIEW.lng, DEFAULT_VIEW.lat],
       zoom: DEFAULT_VIEW.zoom,
       attributionControl: { compact: true },
@@ -326,7 +331,7 @@ export default function MapView() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    map.setStyle(BASEMAP_STYLES[settings.basemap])
+    map.setStyle(basemapStyleUrl(settings.basemap))
     // styledata handler re-adds our layers + refreshes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.basemap])

@@ -4,15 +4,37 @@
  *  (injecting the key); in prod, the Cloudflare Pages Function does. */
 export const API_BASE = '/api'
 
-/** OpenFreeMap basemap styles (no API key required). */
-export const BASEMAP_STYLES = {
+export type BasemapId = 'liberty' | 'bright' | 'positron' | 'dark'
+
+/** Free, keyless OpenFreeMap styles (the default). */
+const OPENFREEMAP_STYLES: Record<BasemapId, string> = {
   liberty: 'https://tiles.openfreemap.org/styles/liberty',
   bright: 'https://tiles.openfreemap.org/styles/bright',
   positron: 'https://tiles.openfreemap.org/styles/positron',
   dark: 'https://tiles.openfreemap.org/styles/dark',
-} as const
+}
 
-export type BasemapId = keyof typeof BASEMAP_STYLES
+/** MapTiler style ids mapped to our basemap ids (used when a key is configured). */
+const MAPTILER_STYLES: Record<BasemapId, string> = {
+  liberty: 'streets-v2',
+  bright: 'bright-v2',
+  positron: 'dataviz',
+  dark: 'streets-v2-dark',
+}
+
+/** Public MapTiler key, baked at build time. Set VITE_MAPTILER_KEY to enable
+ *  MapTiler's (prettier) styles; restrict the key to your domain in MapTiler. */
+const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY as string | undefined) || ''
+
+export const usingMapTiler = MAPTILER_KEY.length > 0
+
+/** Resolve a basemap id to a style URL — MapTiler if a key is set, else OpenFreeMap. */
+export function basemapStyleUrl(id: BasemapId): string {
+  if (MAPTILER_KEY) {
+    return `https://api.maptiler.com/maps/${MAPTILER_STYLES[id]}/style.json?key=${MAPTILER_KEY}`
+  }
+  return OPENFREEMAP_STYLES[id]
+}
 
 /** Zoom at/above which we show individual locations instead of server clusters. */
 export const INDIVIDUAL_ZOOM = 14

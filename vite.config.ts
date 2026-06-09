@@ -45,8 +45,10 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
             {
-              // OpenFreeMap basemap vector tiles, glyphs, sprites
-              urlPattern: ({ url }) => url.hostname.endsWith('openfreemap.org'),
+              // Basemap vector tiles, glyphs, sprites (OpenFreeMap or MapTiler)
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('openfreemap.org') ||
+                url.hostname.endsWith('maptiler.com'),
               handler: 'CacheFirst',
               options: {
                 cacheName: 'basemap',
