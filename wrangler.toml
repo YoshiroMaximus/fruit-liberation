@@ -1,0 +1,10 @@
+name = "fruit-liberation"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"
+
+# The Falling Fruit API key is read from the FF_API_KEY environment variable by
+# functions/api/[[path]].ts. It falls back to the public production key, so the
+# app works without any configuration. To use your own key:
+#   npx wrangler pages secret put FF_API_KEY
+#
+# Functions in ./functions are auto-detected and deployed with the site.

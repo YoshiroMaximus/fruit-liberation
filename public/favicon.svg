@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fruit Liberation">
+  <defs>
+    <linearGradient id="fruit" x1="170" y1="180" x2="360" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7a23a"/>
+      <stop offset="1" stop-color="#ef7411"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="270" y1="120" x2="400" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7cc06a"/>
+      <stop offset="1" stop-color="#4f9a45"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#1f3d2b"/>
+  <circle cx="248" cy="300" r="150" fill="url(#fruit)"/>
+  <circle cx="200" cy="252" r="34" fill="#ffffff" opacity="0.28"/>
+  <path d="M268 168c8-46 46-78 96-80-2 50-32 90-78 100-12 2-20-8-18-20z" fill="url(#leaf)"/>
+  <path d="M276 176c24-18 50-28 76-30" stroke="#2c5e34" stroke-width="7" stroke-linecap="round" opacity="0.55"/>
+  <path d="M256 176c-6-22-2-44 10-62" stroke="#3f6b46" stroke-width="12" stroke-linecap="round"/>
+</svg>
