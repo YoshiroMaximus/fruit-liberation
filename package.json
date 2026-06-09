@@ -1,0 +1,32 @@
+{
+  "name": "fruit-liberation",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A fast, modern PWA for foraging the world's edible plants, powered by the Falling Fruit API.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "pages:dev": "wrangler pages dev",
+    "pages:deploy": "npm run build && wrangler pages deploy dist"
+  },
+  "dependencies": {
+    "idb-keyval": "^6.2.1",
+    "maplibre-gl": "^4.7.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.20",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3",
+    "vite-plugin-pwa": "^0.21.1",
+    "wrangler": "^3.91.0"
+  }
+}
