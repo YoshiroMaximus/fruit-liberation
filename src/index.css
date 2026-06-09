@@ -366,6 +366,202 @@ a:hover {
 .fab--busy {
   animation: throb 1s ease-in-out infinite;
 }
+.fab--accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ---------------- add-a-spot: placement ---------------- */
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  pointer-events: none;
+  z-index: 35;
+}
+.crosshair__ring {
+  position: absolute;
+  inset: 0;
+  border: 2.5px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+.crosshair__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+.place-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--safe-b) + 16px);
+  width: min(520px, calc(100% - 24px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  z-index: 50;
+  animation: locup 0.25s ease;
+}
+.place-bar__msg {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+.place-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+.place-bar__actions .btn {
+  flex: 1;
+}
+
+/* ---------------- forms (add-a-spot) ---------------- */
+.form-section {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.form-label {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 540;
+}
+.req {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+}
+.sub-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+select.field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235f6555' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 34px;
+}
+textarea.field {
+  resize: vertical;
+  font-family: var(--font-ui);
+  line-height: 1.45;
+}
+.type-list--compact {
+  max-height: 230px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 4px;
+}
+.photo-input {
+  display: block;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  padding: 14px;
+  text-align: center;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.photo-input__preview {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  display: block;
+}
+
+/* ---------------- in-sheet note form ---------------- */
+.note {
+  margin-top: 16px;
+}
+.note__form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 12px;
+}
+.note__actions {
+  display: flex;
+  gap: 8px;
+}
+.note__actions .btn {
+  flex: 1;
+}
+
+/* ---------------- ripe-now ---------------- */
+.ripe-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.ripe-pill {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.ripe-pill--on {
+  background: color-mix(in srgb, var(--lemon) 30%, var(--surface));
+  border-color: var(--lemon);
+}
+.ripe-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-brand);
+  background: var(--moss);
+  border-radius: var(--r-pill);
+  padding: 2px 7px;
+}
+.saved-item__nameline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.empty-note {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 14px 8px 18px;
+  font-size: 14px;
+}
 
 /* ---------------- bottom dock ---------------- */
 .dock {

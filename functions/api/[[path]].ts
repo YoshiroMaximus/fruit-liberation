@@ -72,12 +72,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   headers.delete('host')
   headers.delete('cookie')
 
+  // Buffer write bodies (JSON + multipart photo uploads) so they forward
+  // reliably without request-stream/duplex concerns. Content-Type (incl. the
+  // multipart boundary) is preserved via the copied headers.
+  const reqBody = isGet ? undefined : await request.arrayBuffer()
+
   let upstream: Response
   try {
     upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: isGet ? undefined : request.body,
+      body: reqBody,
       redirect: 'follow',
     })
   } catch {

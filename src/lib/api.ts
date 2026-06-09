@@ -6,6 +6,9 @@ import type {
   ListLocation,
   Location,
   LocationList,
+  NewLocation,
+  NewReview,
+  Photo,
   Review,
   TypeCount,
   User,
@@ -173,6 +176,36 @@ export async function fetchLocation(
 
 export async function fetchReviews(id: number, signal?: AbortSignal): Promise<Review[]> {
   return (await request<Review[]>(`/locations/${id}/reviews`, { signal })).data
+}
+
+/* ----------------------------- contributing ----------------------------- */
+
+export async function uploadPhoto(file: File): Promise<Photo> {
+  const form = new FormData()
+  form.set('file', file)
+  return (await request<Photo>('/photos', { method: 'POST', auth: true, body: form })).data
+}
+
+export async function createLocation(body: NewLocation): Promise<Location> {
+  return (
+    await request<Location>('/locations', {
+      method: 'POST',
+      auth: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  ).data
+}
+
+export async function createReview(locationId: number, body: NewReview): Promise<Review> {
+  return (
+    await request<Review>(`/locations/${locationId}/reviews`, {
+      method: 'POST',
+      auth: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  ).data
 }
 
 /* ----------------------------- auth ----------------------------- */

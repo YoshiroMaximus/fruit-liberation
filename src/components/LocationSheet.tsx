@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchLocation } from '../lib/api'
-import type { Location } from '../lib/types'
+import { createReview, fetchLocation } from '../lib/api'
+import type { FruitingStatus, Location, Rating } from '../lib/types'
 import { ACCESS_LABELS, FRUITING_LABELS } from '../lib/types'
 import { useStore } from '../store/useStore'
 import {
@@ -27,15 +27,27 @@ export default function LocationSheet() {
   const isSaved = useStore((s) => s.isSaved)
   const toggleSaved = useStore((s) => s.toggleSaved)
   const showToast = useStore((s) => s.showToast)
+  const user = useStore((s) => s.user)
 
   const [loc, setLoc] = useState<Location | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // mini "add a note" review form
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [nFruiting, setNFruiting] = useState('')
+  const [nObserved, setNObserved] = useState(() => new Date().toISOString().slice(0, 10))
+  const [nQuality, setNQuality] = useState('')
+  const [nComment, setNComment] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [noteError, setNoteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id == null) {
       setLoc(null)
       setError(null)
+      setNoteOpen(false)
       return
     }
     const ac = new AbortController()
@@ -49,7 +61,7 @@ export default function LocationSheet() {
       })
       .finally(() => setLoading(false))
     return () => ac.abort()
-  }, [id])
+  }, [id, refreshKey])
 
   const primary = loc?.type_ids?.[0]
   const indexed = primary != null ? typeIndex?.byId.get(primary) : undefined
@@ -86,9 +98,39 @@ export default function LocationSheet() {
       color: indexed?.color ?? '#5a9e4b',
       typeIds: loc.type_ids,
       address: loc.address,
+      seasonStart: loc.season_start,
+      seasonStop: loc.season_stop,
       savedAt: Date.now(),
     })
     showToast(saved ? 'Removed from saved' : 'Saved to your spots')
+  }
+
+  const submitNote = async () => {
+    if (!loc) return
+    if (!nComment.trim() && nFruiting === '' && nQuality === '') {
+      setNoteError('Add a status, rating, or comment.')
+      return
+    }
+    setPosting(true)
+    setNoteError(null)
+    try {
+      await createReview(loc.id, {
+        comment: nComment.trim() || null,
+        observed_on: nObserved || new Date().toISOString().slice(0, 10),
+        fruiting: nFruiting === '' ? null : (Number(nFruiting) as FruitingStatus),
+        quality_rating: nQuality === '' ? null : (Number(nQuality) as Rating),
+      })
+      showToast('Thanks for the update! 🌿')
+      setNoteOpen(false)
+      setNComment('')
+      setNFruiting('')
+      setNQuality('')
+      setRefreshKey((k) => k + 1)
+    } catch (e) {
+      setNoteError(e instanceof Error ? e.message : 'Could not post your note.')
+    } finally {
+      setPosting(false)
+    }
   }
 
   const onShare = async () => {
@@ -198,6 +240,66 @@ export default function LocationSheet() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {user && (
+            <div className="note">
+              {!noteOpen ? (
+                <button className="btn btn--ghost btn--block" onClick={() => setNoteOpen(true)}>
+                  ＋ Add a note / mark as ripe
+                </button>
+              ) : (
+                <div className="note__form">
+                  <div className="two-col">
+                    <select
+                      className="field"
+                      value={nFruiting}
+                      onChange={(e) => setNFruiting(e.target.value)}
+                    >
+                      <option value="">Status…</option>
+                      <option value="0">Flowers</option>
+                      <option value="1">Unripe fruit</option>
+                      <option value="2">Ripe fruit</option>
+                    </select>
+                    <input
+                      className="field"
+                      type="date"
+                      max={new Date().toISOString().slice(0, 10)}
+                      value={nObserved}
+                      onChange={(e) => setNObserved(e.target.value)}
+                    />
+                  </div>
+                  <select
+                    className="field"
+                    value={nQuality}
+                    onChange={(e) => setNQuality(e.target.value)}
+                  >
+                    <option value="">Quality…</option>
+                    {[0, 1, 2, 3, 4].map((n) => (
+                      <option key={n} value={n}>
+                        Quality {n}/4
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="field"
+                    rows={2}
+                    placeholder="How does it look?"
+                    value={nComment}
+                    onChange={(e) => setNComment(e.target.value)}
+                  />
+                  {noteError && <p className="form-error">{noteError}</p>}
+                  <div className="note__actions">
+                    <button className="btn btn--ghost" onClick={() => setNoteOpen(false)}>
+                      Cancel
+                    </button>
+                    <button className="btn btn--primary" onClick={submitNote} disabled={posting}>
+                      {posting ? 'Posting…' : 'Post note'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

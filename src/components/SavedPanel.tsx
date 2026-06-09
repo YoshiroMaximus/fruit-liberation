@@ -7,6 +7,7 @@ import {
   formatDistance,
   googleMapsUrl,
   haversine,
+  isInSeasonNow,
   nearestNeighborOrder,
   totalRouteDistance,
 } from '../lib/geo'
@@ -26,10 +27,17 @@ export default function SavedPanel() {
   const showToast = useStore((s) => s.showToast)
 
   const [optimize, setOptimize] = useState(true)
+  const [ripeNow, setRipeNow] = useState(false)
   const [lists, setLists] = useState<LocationList[] | null>(null)
   const [syncing, setSyncing] = useState(false)
 
   const open = panel === 'saved'
+
+  const ripeCount = useMemo(
+    () => saved.filter((s) => isInSeasonNow(s.seasonStart, s.seasonStop)).length,
+    [saved],
+  )
+  const unknownSeason = useMemo(() => saved.filter((s) => s.seasonStart == null).length, [saved])
 
   useEffect(() => {
     if (!open || !user) return
@@ -39,11 +47,14 @@ export default function SavedPanel() {
   }, [open, user])
 
   const orderedSaved = useMemo(() => {
-    if (optimize && userLocation && saved.length > 1) {
-      return nearestNeighborOrder(userLocation, saved)
+    const base = ripeNow
+      ? saved.filter((s) => isInSeasonNow(s.seasonStart, s.seasonStop))
+      : saved
+    if (optimize && userLocation && base.length > 1) {
+      return nearestNeighborOrder(userLocation, base)
     }
-    return saved
-  }, [optimize, userLocation, saved])
+    return base
+  }, [optimize, userLocation, saved, ripeNow])
 
   const stops = orderedSaved.map((s) => ({ lat: s.lat, lng: s.lng }))
   const routeMeters = totalRouteDistance(userLocation, stops)
@@ -104,6 +115,25 @@ export default function SavedPanel() {
 
       {saved.length > 0 && (
         <>
+          <div className="ripe-toggle">
+            <button
+              className={`ripe-pill${ripeNow ? ' ripe-pill--on' : ''}`}
+              onClick={() => setRipeNow((v) => !v)}
+            >
+              🫐 Ripe right now{ripeCount > 0 ? ` · ${ripeCount}` : ''}
+            </button>
+            {ripeNow && unknownSeason > 0 && (
+              <span className="muted small">{unknownSeason} unknown-season hidden</span>
+            )}
+          </div>
+
+          {orderedSaved.length === 0 ? (
+            <p className="empty-note">
+              Nothing’s in season right now among your saved spots — tap the toggle to
+              see them all.
+            </p>
+          ) : (
+            <>
           <div className="route-card">
             <div className="route-card__top">
               <RouteIcon width={18} height={18} />
@@ -147,7 +177,12 @@ export default function SavedPanel() {
                       {s.emoji}
                     </span>
                     <span className="saved-item__text">
-                      <span className="saved-item__name">{s.name}</span>
+                      <span className="saved-item__nameline">
+                        <span className="saved-item__name">{s.name}</span>
+                        {isInSeasonNow(s.seasonStart, s.seasonStop) && (
+                          <span className="ripe-tag">ripe</span>
+                        )}
+                      </span>
                       <span className="muted small">
                         {dist != null ? `${formatDistance(dist, units === 'imperial')} · ` : ''}
                         {s.address ?? `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
@@ -165,6 +200,8 @@ export default function SavedPanel() {
               )
             })}
           </ol>
+            </>
+          )}
 
           {user ? (
             <div className="sync-block">

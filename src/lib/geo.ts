@@ -66,6 +66,20 @@ export function totalRouteDistance(origin: LatLng | null, stops: LatLng[]): numb
   return total
 }
 
+/** Whether month `m` (0-based) falls in the [start, stop] season (handles wrap). */
+export function monthInSeason(m: number, start: number, stop: number): boolean {
+  return start <= stop ? m >= start && m <= stop : m >= start || m <= stop
+}
+
+/** Whether a season range is active in the current local month. */
+export function isInSeasonNow(
+  start: number | null | undefined,
+  stop: number | null | undefined,
+): boolean {
+  if (start == null || stop == null) return false
+  return monthInSeason(new Date().getMonth(), start, stop)
+}
+
 export const isApplePlatform = () =>
   typeof navigator !== 'undefined' &&
   /iphone|ipad|ipod|macintosh/i.test(navigator.userAgent) &&

@@ -16,6 +16,8 @@ export interface SavedSpot {
   typeIds: number[]
   address?: string | null
   note?: string
+  seasonStart?: number | null
+  seasonStop?: number | null
   savedAt: number
 }
 
@@ -26,7 +28,7 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark'
 }
 
-export type Panel = 'none' | 'filters' | 'saved' | 'account'
+export type Panel = 'none' | 'filters' | 'saved' | 'account' | 'add'
 
 interface PersistedAuth {
   token: AuthToken | null
@@ -53,6 +55,7 @@ interface AppState {
   toast: string | null
   flyTarget: (LatLng & { zoom?: number }) | null
   viewStatus: { mode: 'clusters' | 'locations'; count: number; truncated: boolean } | null
+  placing: boolean
 
   // ---- actions ----
   setSettings: (partial: Partial<Settings>) => void
@@ -82,6 +85,7 @@ interface AppState {
   showToast: (msg: string | null) => void
   setFlyTarget: (t: (LatLng & { zoom?: number }) | null) => void
   setViewStatus: (v: AppState['viewStatus']) => void
+  setPlacing: (placing: boolean) => void
 }
 
 const defaultSettings: Settings = {
@@ -111,6 +115,7 @@ export const useStore = create<AppState>()(
       toast: null,
       flyTarget: null,
       viewStatus: null,
+      placing: false,
 
       setSettings: (partial) => set((s) => ({ settings: { ...s.settings, ...partial } })),
 
@@ -157,6 +162,7 @@ export const useStore = create<AppState>()(
       showToast: (toast) => set({ toast }),
       setFlyTarget: (flyTarget) => set({ flyTarget }),
       setViewStatus: (viewStatus) => set({ viewStatus }),
+      setPlacing: (placing) => set({ placing }),
     }),
     {
       name: STORAGE_KEYS.settings,

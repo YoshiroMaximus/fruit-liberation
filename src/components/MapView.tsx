@@ -14,6 +14,7 @@ import {
   locationsToGeoJSON,
 } from '../lib/mapData'
 import { useStore } from '../store/useStore'
+import { setMap } from '../lib/mapRef'
 
 const LOCATION_LAYERS = [
   'locations-saved',
@@ -171,6 +172,7 @@ export default function MapView() {
       pitchWithRotate: false,
     })
     mapRef.current = map
+    setMap(map)
     map.touchZoomRotate.disableRotation()
 
     const refresh = (immediate = false) => {
@@ -278,6 +280,7 @@ export default function MapView() {
     })
 
     map.on('click', 'locations-circle', (e: MapLayerMouseEvent) => {
+      if (useStore.getState().placing) return
       const f = e.features?.[0]
       if (!f) return
       const id = f.properties?.id as number
@@ -302,6 +305,7 @@ export default function MapView() {
       abortRef.current?.abort()
       map.remove()
       mapRef.current = null
+      setMap(null)
     }
   }, [])
 

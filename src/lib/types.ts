@@ -111,6 +111,29 @@ export interface LocationList {
   locations?: LocationListLocation[]
 }
 
+/** Body for creating/adding a review. */
+export interface NewReview {
+  comment?: string | null
+  observed_on?: string | null
+  fruiting?: FruitingStatus | null
+  quality_rating?: Rating | null
+  yield_rating?: Rating | null
+  photo_ids?: number[]
+}
+
+/** Body for creating a new location. */
+export interface NewLocation {
+  lat: number
+  lng: number
+  type_ids: number[]
+  description?: string | null
+  access?: number | null
+  season_start?: number | null
+  season_stop?: number | null
+  unverified?: boolean
+  review?: NewReview
+}
+
 export interface AuthToken {
   access_token: string
   token_type: 'bearer'
