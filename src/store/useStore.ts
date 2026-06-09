@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { BasemapId } from '../config'
+import type { BasemapChoice } from '../config'
 import { STORAGE_KEYS } from '../config'
 import type { AuthToken, User } from '../lib/types'
 import type { TypeIndex } from '../lib/typeIndex'
@@ -22,7 +22,7 @@ export interface SavedSpot {
 }
 
 export interface Settings {
-  basemap: BasemapId
+  basemap: BasemapChoice
   units: 'imperial' | 'metric'
   muni: boolean
   theme: 'system' | 'light' | 'dark'
@@ -56,6 +56,7 @@ interface AppState {
   flyTarget: (LatLng & { zoom?: number }) | null
   viewStatus: { mode: 'clusters' | 'locations'; count: number; truncated: boolean } | null
   placing: boolean
+  resolvedTheme: 'light' | 'dark'
 
   // ---- actions ----
   setSettings: (partial: Partial<Settings>) => void
@@ -86,10 +87,11 @@ interface AppState {
   setFlyTarget: (t: (LatLng & { zoom?: number }) | null) => void
   setViewStatus: (v: AppState['viewStatus']) => void
   setPlacing: (placing: boolean) => void
+  setResolvedTheme: (t: 'light' | 'dark') => void
 }
 
 const defaultSettings: Settings = {
-  basemap: 'liberty',
+  basemap: 'auto',
   units: 'imperial',
   muni: true,
   theme: 'system',
@@ -116,6 +118,7 @@ export const useStore = create<AppState>()(
       flyTarget: null,
       viewStatus: null,
       placing: false,
+      resolvedTheme: 'light',
 
       setSettings: (partial) => set((s) => ({ settings: { ...s.settings, ...partial } })),
 
@@ -163,6 +166,7 @@ export const useStore = create<AppState>()(
       setFlyTarget: (flyTarget) => set({ flyTarget }),
       setViewStatus: (viewStatus) => set({ viewStatus }),
       setPlacing: (placing) => set({ placing }),
+      setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
     }),
     {
       name: STORAGE_KEYS.settings,

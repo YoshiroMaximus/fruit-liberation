@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import Sheet from './Sheet'
 import { CloseIcon } from './icons'
 import { useStore } from '../store/useStore'
-import type { BasemapId } from '../config'
+import type { BasemapChoice } from '../config'
 
-const BASEMAP_OPTIONS: { id: BasemapId; label: string }[] = [
+const BASEMAP_OPTIONS: { id: BasemapChoice; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
   { id: 'liberty', label: 'Field' },
   { id: 'bright', label: 'Bright' },
   { id: 'positron', label: 'Light' },

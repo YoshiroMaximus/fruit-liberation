@@ -106,6 +106,102 @@ a:hover {
   inset: 0;
 }
 
+/* Subtle scrim so the top chrome stays legible over a busy basemap. */
+.top-scrim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--safe-t) + 150px);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 78%, transparent),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* "Search this area" pill (shown after panning). */
+.search-area {
+  position: absolute;
+  top: calc(var(--safe-t) + 150px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  color: var(--brand);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 13.5px;
+  box-shadow: var(--shadow);
+  z-index: 21;
+  animation: pop 0.18s ease;
+}
+.search-area:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+/* First-run location card. */
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 16, 10, 0.5);
+  padding: 24px;
+  animation: fade 0.2s ease;
+}
+.onboard__card {
+  width: min(380px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: 26px 22px 18px;
+  text-align: center;
+  animation: pop 0.22s ease;
+}
+.onboard__badge {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--brand) 14%, var(--surface));
+  color: var(--brand);
+  margin-bottom: 12px;
+}
+.onboard__title {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 540;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.onboard__text {
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+.onboard__skip {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 8px;
+}
+
 .topbar {
   position: absolute;
   top: 0;

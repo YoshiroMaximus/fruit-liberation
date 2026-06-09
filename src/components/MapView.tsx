@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import maplibregl, { type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl'
+import maplibregl, {
+  type GeoJSONSource,
+  type LayerSpecification,
+  type MapLayerMouseEvent,
+} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   basemapStyleUrl,
   DEFAULT_VIEW,
   INDIVIDUAL_ZOOM,
   LOCATION_LIMIT,
+  resolveBasemap,
 } from '../config'
+import { SearchIcon } from './icons'
 import { boundsParam, fetchClusters, fetchLocations } from '../lib/api'
 import {
   clustersToGeoJSON,
@@ -147,15 +153,56 @@ function setLayerVisibility(map: maplibregl.Map, ids: string[], visible: boolean
   }
 }
 
+// Hide basemap POI + transit clutter (bus stops, station icons, shop/school
+// labels) so our fruit markers stand out. Targets the OpenMapTiles `poi`/
+// `transit` source-layers (used by both OpenFreeMap and MapTiler) plus any
+// transit-ish layer id. Roads, street names, water, and parks are kept.
+const POI_TRANSIT = /(^|[-_ ])(poi|transit|bus|aerodrome|airport|ferry|aerialway)([-_ ]|$)/i
+
+function declutterBasemap(map: maplibregl.Map) {
+  let layers: LayerSpecification[] | undefined
+  try {
+    layers = map.getStyle()?.layers
+  } catch {
+    return
+  }
+  if (!layers) return
+  for (const layer of layers) {
+    const id = layer.id
+    if (id.startsWith('locations') || id.startsWith('clusters')) continue
+    const srcLayer = (layer as { 'source-layer'?: string })['source-layer'] ?? ''
+    if (
+      srcLayer === 'poi' ||
+      srcLayer === 'transit' ||
+      POI_TRANSIT.test(id) ||
+      POI_TRANSIT.test(srcLayer)
+    ) {
+      try {
+        map.setLayoutProperty(id, 'visibility', 'none')
+      } catch {
+        /* some layers can't be toggled – skip */
+      }
+    }
+  }
+}
+
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const userMarkerRef = useRef<maplibregl.Marker | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const debounceRef = useRef<number | undefined>(undefined)
+  // Last successfully-fetched view + a flag to force the next fetch (filters,
+  // flyTo) past the "pan → Search this area" gate. styleRef avoids redundant
+  // setStyle reloads when the resolved basemap is unchanged.
+  const forceRef = useRef(true)
+  const lastFetchRef = useRef<{ lat: number; lng: number; zoom: number } | null>(null)
+  const styleRef = useRef('')
   const [ready, setReady] = useState(false)
+  const [staleView, setStaleView] = useState(false)
 
   const settings = useStore((s) => s.settings)
+  const resolvedTheme = useStore((s) => s.resolvedTheme)
   const selectedTypes = useStore((s) => s.selectedTypes)
   const typeIndex = useStore((s) => s.typeIndex)
   const saved = useStore((s) => s.saved)
@@ -166,9 +213,15 @@ export default function MapView() {
   /* ---- create the map once ---- */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+    const s0 = useStore.getState()
+    const dark0 =
+      s0.settings.theme === 'dark' ||
+      (s0.settings.theme === 'system' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
+    styleRef.current = basemapStyleUrl(resolveBasemap(s0.settings.basemap, dark0))
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: basemapStyleUrl(useStore.getState().settings.basemap),
+      style: styleRef.current,
       center: [DEFAULT_VIEW.lng, DEFAULT_VIEW.lat],
       zoom: DEFAULT_VIEW.zoom,
       attributionControl: { compact: true },
@@ -196,6 +249,7 @@ export default function MapView() {
         return
       }
       const zoom = map.getZoom()
+      const center = map.getCenter()
       const state = useStore.getState()
       const bounds = boundsParam({
         west: b.getWest(),
@@ -251,6 +305,8 @@ export default function MapView() {
             truncated: false,
           })
         }
+        lastFetchRef.current = { lat: center.lat, lng: center.lng, zoom }
+        setStaleView(false)
       } catch (err) {
         if ((err as { name?: string })?.name !== 'AbortError') {
           // Network hiccup – keep last data on screen.
@@ -264,12 +320,36 @@ export default function MapView() {
     map.on('styledata', () => {
       if (!map.getSource('locations')) {
         addSourcesAndLayers(map)
+        declutterBasemap(map)
         setReady(true)
         refresh(true)
       }
     })
 
-    map.on('moveend', () => refresh())
+    // Auto-fetch on zoom changes, filter changes, and programmatic flyTo
+    // (forceRef); for a plain pan at the same zoom, offer "Search this area"
+    // instead of silently refetching.
+    map.on('moveend', () => {
+      const z = map.getZoom()
+      const c = map.getCenter()
+      const prev = lastFetchRef.current
+      if (forceRef.current || !prev) {
+        forceRef.current = false
+        refresh()
+        return
+      }
+      if (Math.abs(z - prev.zoom) >= 0.4) {
+        refresh()
+        return
+      }
+      const p1 = map.project([c.lng, c.lat])
+      const p2 = map.project([prev.lng, prev.lat])
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y)
+      const el = map.getContainer()
+      if (dist > 0.33 * Math.min(el.clientWidth, el.clientHeight)) {
+        setStaleView(true)
+      }
+    })
 
     // ---- interactions ----
     for (const layer of ['clusters-circle', 'locations-circle']) {
@@ -322,19 +402,21 @@ export default function MapView() {
     if (!map || !ready) return
     window.clearTimeout(debounceRef.current)
     debounceRef.current = window.setTimeout(() => {
-      map.fire('moveend') // reuse the same handler path
+      forceRef.current = true // filter changes always refetch (skip the pan gate)
+      map.fire('moveend')
     }, 50)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTypes, settings.muni, typeIndex, ready])
 
-  /* ---- change basemap ---- */
+  /* ---- change basemap (manual choice or theme when 'auto') ---- */
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !ready) return
-    map.setStyle(basemapStyleUrl(settings.basemap))
+    const next = basemapStyleUrl(resolveBasemap(settings.basemap, resolvedTheme === 'dark'))
+    if (!map || !ready || next === styleRef.current) return
+    styleRef.current = next
+    map.setStyle(next)
     // styledata handler re-adds our layers + refreshes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.basemap])
+  }, [settings.basemap, resolvedTheme, ready])
 
   /* ---- highlight saved spots ---- */
   useEffect(() => {
@@ -355,6 +437,7 @@ export default function MapView() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !flyTarget) return
+    forceRef.current = true // refetch at the destination, don't show the pill
     map.flyTo({
       center: [flyTarget.lng, flyTarget.lat],
       zoom: Math.max(flyTarget.zoom ?? 0, map.getZoom(), 16),
@@ -387,5 +470,22 @@ export default function MapView() {
     }
   }, [userLocation])
 
-  return <div ref={containerRef} className="map" aria-label="Map of edible plants" />
+  return (
+    <>
+      <div ref={containerRef} className="map" aria-label="Map of edible plants" />
+      {staleView && (
+        <button
+          className="search-area"
+          onClick={() => {
+            setStaleView(false)
+            forceRef.current = true
+            mapRef.current?.fire('moveend')
+          }}
+        >
+          <SearchIcon width={15} height={15} />
+          Search this area
+        </button>
+      )}
+    </>
+  )
 }

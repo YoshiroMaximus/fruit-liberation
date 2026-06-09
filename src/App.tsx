@@ -7,6 +7,7 @@ import LocationSheet from './components/LocationSheet'
 import SavedPanel from './components/SavedPanel'
 import AccountPanel from './components/AccountPanel'
 import AddSpotPanel from './components/AddSpotPanel'
+import FirstRunLocate from './components/FirstRunLocate'
 import LocateButton from './components/LocateButton'
 import Toast from './components/Toast'
 import ReloadPrompt from './components/ReloadPrompt'
@@ -17,6 +18,7 @@ import { loadTypes } from './lib/loadTypes'
 
 function useTheme() {
   const theme = useStore((s) => s.settings.theme)
+  const setResolvedTheme = useStore((s) => s.setResolvedTheme)
   useEffect(() => {
     const root = document.documentElement
     const apply = () => {
@@ -27,9 +29,10 @@ function useTheme() {
             : 'light'
           : theme
       root.dataset.theme = resolved
+      setResolvedTheme(resolved)
       root
         .querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', resolved === 'dark' ? '#0f1511' : '#1f3d2b')
+        ?.setAttribute('content', resolved === 'dark' ? '#202124' : '#1f6b3a')
     }
     apply()
     if (theme === 'system') {
@@ -37,7 +40,7 @@ function useTheme() {
       mq.addEventListener('change', apply)
       return () => mq.removeEventListener('change', apply)
     }
-  }, [theme])
+  }, [theme, setResolvedTheme])
 }
 
 export default function App() {
@@ -79,6 +82,7 @@ export default function App() {
   return (
     <div className="app">
       <MapView />
+      <div className="top-scrim" aria-hidden />
 
       <div className="topbar">
         <SearchBar />
@@ -124,6 +128,7 @@ export default function App() {
       <AccountPanel />
       {panel === 'add' && <AddSpotPanel />}
 
+      <FirstRunLocate />
       <InstallPrompt />
       <Toast />
       <ReloadPrompt />

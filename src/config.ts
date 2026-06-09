@@ -5,6 +5,14 @@
 export const API_BASE = '/api'
 
 export type BasemapId = 'liberty' | 'bright' | 'positron' | 'dark'
+/** What the user can choose; 'auto' follows the app's light/dark theme. */
+export type BasemapChoice = BasemapId | 'auto'
+
+/** Resolve a basemap choice to a concrete style id (auto → theme-matched). */
+export function resolveBasemap(choice: BasemapChoice, dark: boolean): BasemapId {
+  if (choice === 'auto') return dark ? 'dark' : 'liberty'
+  return choice
+}
 
 /** Free, keyless OpenFreeMap styles (the default). */
 const OPENFREEMAP_STYLES: Record<BasemapId, string> = {
