@@ -25,6 +25,11 @@ native on a phone.
   Falling Fruit account to sync them to a server list across devices.
 - **Build a route:** nearest-neighbor ordering from your location → one tap opens
   a multi-stop **walking route** in Google Maps or Apple Maps.
+- **"Ripe right now"** filter on your saved spots (built from each spot's season),
+  with a per-spot ripe badge and a season-aware route.
+- **Contribute** (signed in): add a new spot with a pan-to-place crosshair,
+  type/season/access details, and an optional first sighting + photo; leave a
+  note / mark a spot ripe right from its detail sheet.
 - **Live location** tracking for foraging on the move.
 - **Full PWA:** installable, offline app shell, cached catalog + basemap tiles,
   light/dark themes that follow the system.
@@ -132,10 +137,12 @@ anything before eating it, and leave plenty for other people and for wildlife.
 
 ## 🗺️ Roadmap / not yet included
 
-- Contributing data (adding spots, reviews, photos) — needs login + reCAPTCHA
-  handling; intentionally out of scope for v1 (view + save).
+- Edit/delete your own spots and reviews from the app.
+- Anonymous contributing (would need reCAPTCHA v2 in the add flow; today
+  contributing requires sign-in, which skips the captcha).
+- Whole-map "ripe now" (the list/cluster API has no season field, so today this
+  is scoped to saved spots, whose season is captured on save).
 - Self-hosted Protomaps basemap on Cloudflare R2 (optional speed/offline upgrade).
-- Season-aware filtering ("ripe right now").
 
 ## License
 
