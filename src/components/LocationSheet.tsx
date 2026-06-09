@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createReview, fetchLocation } from '../lib/api'
-import type { FruitingStatus, Location, Rating } from '../lib/types'
-import { ACCESS_LABELS, FRUITING_LABELS } from '../lib/types'
+import type { Location } from '../lib/types'
+import { ACCESS_LABELS, FRUITING_LABELS, RATINGS } from '../lib/types'
+import { buildReview } from '../lib/review'
 import { useStore } from '../store/useStore'
 import {
   appleMapsUrl,
@@ -9,14 +10,12 @@ import {
   googleMapsUrl,
   haversine,
   isApplePlatform,
+  monthInSeason,
+  todayISO,
 } from '../lib/geo'
 import { BookmarkIcon, CloseIcon, NavIcon, ShareIcon } from './icons'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
-
-function inSeason(month: number, start: number, stop: number) {
-  return start <= stop ? month >= start && month <= stop : month >= start || month <= stop
-}
 
 export default function LocationSheet() {
   const id = useStore((s) => s.selectedLocationId)
@@ -37,17 +36,24 @@ export default function LocationSheet() {
   // mini "add a note" review form
   const [noteOpen, setNoteOpen] = useState(false)
   const [nFruiting, setNFruiting] = useState('')
-  const [nObserved, setNObserved] = useState(() => new Date().toISOString().slice(0, 10))
+  const [nObserved, setNObserved] = useState(todayISO)
   const [nQuality, setNQuality] = useState('')
   const [nComment, setNComment] = useState('')
   const [posting, setPosting] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Reset the inline note form whenever the target location changes, so a
+    // draft note never bleeds from one spot onto another.
+    setNoteOpen(false)
+    setNFruiting('')
+    setNQuality('')
+    setNComment('')
+    setNObserved(todayISO())
+    setNoteError(null)
     if (id == null) {
       setLoc(null)
       setError(null)
-      setNoteOpen(false)
       return
     }
     const ac = new AbortController()
@@ -107,19 +113,20 @@ export default function LocationSheet() {
 
   const submitNote = async () => {
     if (!loc) return
-    if (!nComment.trim() && nFruiting === '' && nQuality === '') {
+    const review = buildReview({
+      comment: nComment,
+      observed_on: nObserved,
+      fruiting: nFruiting,
+      quality_rating: nQuality,
+    })
+    if (!review) {
       setNoteError('Add a status, rating, or comment.')
       return
     }
     setPosting(true)
     setNoteError(null)
     try {
-      await createReview(loc.id, {
-        comment: nComment.trim() || null,
-        observed_on: nObserved || new Date().toISOString().slice(0, 10),
-        fruiting: nFruiting === '' ? null : (Number(nFruiting) as FruitingStatus),
-        quality_rating: nQuality === '' ? null : (Number(nQuality) as Rating),
-      })
+      await createReview(loc.id, review)
       showToast('Thanks for the update! 🌿')
       setNoteOpen(false)
       setNComment('')
@@ -200,7 +207,7 @@ export default function LocationSheet() {
                 {MONTHS.map((m, i) => (
                   <span
                     key={i}
-                    className={`season__cell${inSeason(i, loc.season_start!, loc.season_stop!) ? ' season__cell--on' : ''}`}
+                    className={`season__cell${monthInSeason(i, loc.season_start!, loc.season_stop!) ? ' season__cell--on' : ''}`}
                   >
                     {m}
                   </span>
@@ -246,7 +253,13 @@ export default function LocationSheet() {
           {user && (
             <div className="note">
               {!noteOpen ? (
-                <button className="btn btn--ghost btn--block" onClick={() => setNoteOpen(true)}>
+                <button
+                  className="btn btn--ghost btn--block"
+                  onClick={() => {
+                    setNoteError(null)
+                    setNoteOpen(true)
+                  }}
+                >
                   ＋ Add a note / mark as ripe
                 </button>
               ) : (
@@ -258,14 +271,16 @@ export default function LocationSheet() {
                       onChange={(e) => setNFruiting(e.target.value)}
                     >
                       <option value="">Status…</option>
-                      <option value="0">Flowers</option>
-                      <option value="1">Unripe fruit</option>
-                      <option value="2">Ripe fruit</option>
+                      {Object.entries(FRUITING_LABELS).map(([v, label]) => (
+                        <option key={v} value={v}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                     <input
                       className="field"
                       type="date"
-                      max={new Date().toISOString().slice(0, 10)}
+                      max={todayISO()}
                       value={nObserved}
                       onChange={(e) => setNObserved(e.target.value)}
                     />
@@ -276,7 +291,7 @@ export default function LocationSheet() {
                     onChange={(e) => setNQuality(e.target.value)}
                   >
                     <option value="">Quality…</option>
-                    {[0, 1, 2, 3, 4].map((n) => (
+                    {RATINGS.map((n) => (
                       <option key={n} value={n}>
                         Quality {n}/4
                       </option>

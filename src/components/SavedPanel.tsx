@@ -7,7 +7,7 @@ import {
   formatDistance,
   googleMapsUrl,
   haversine,
-  isInSeasonNow,
+  monthInSeason,
   nearestNeighborOrder,
   totalRouteDistance,
 } from '../lib/geo'
@@ -33,11 +33,26 @@ export default function SavedPanel() {
 
   const open = panel === 'saved'
 
-  const ripeCount = useMemo(
-    () => saved.filter((s) => isInSeasonNow(s.seasonStart, s.seasonStop)).length,
+  const ripeIds = useMemo(() => {
+    if (!open) return new Set<number>()
+    const month = new Date().getMonth()
+    return new Set(
+      saved
+        .filter(
+          (s) =>
+            s.seasonStart != null &&
+            s.seasonStop != null &&
+            monthInSeason(month, s.seasonStart, s.seasonStop),
+        )
+        .map((s) => s.id),
+    )
+  }, [saved, open])
+  const ripeCount = ripeIds.size
+  // Matches the ripe filter's exclusion: a spot is "unknown" if EITHER bound is null.
+  const unknownSeason = useMemo(
+    () => saved.filter((s) => s.seasonStart == null || s.seasonStop == null).length,
     [saved],
   )
-  const unknownSeason = useMemo(() => saved.filter((s) => s.seasonStart == null).length, [saved])
 
   useEffect(() => {
     if (!open || !user) return
@@ -47,14 +62,13 @@ export default function SavedPanel() {
   }, [open, user])
 
   const orderedSaved = useMemo(() => {
-    const base = ripeNow
-      ? saved.filter((s) => isInSeasonNow(s.seasonStart, s.seasonStop))
-      : saved
+    if (!open) return [] // skip the O(n^2) ordering while the panel is hidden
+    const base = ripeNow ? saved.filter((s) => ripeIds.has(s.id)) : saved
     if (optimize && userLocation && base.length > 1) {
       return nearestNeighborOrder(userLocation, base)
     }
     return base
-  }, [optimize, userLocation, saved, ripeNow])
+  }, [open, optimize, userLocation, saved, ripeNow, ripeIds])
 
   const stops = orderedSaved.map((s) => ({ lat: s.lat, lng: s.lng }))
   const routeMeters = totalRouteDistance(userLocation, stops)
@@ -134,72 +148,71 @@ export default function SavedPanel() {
             </p>
           ) : (
             <>
-          <div className="route-card">
-            <div className="route-card__top">
-              <RouteIcon width={18} height={18} />
-              <div className="route-card__info">
-                <strong>
-                  Walking route{routeMeters > 0 ? ` · ${formatDistance(routeMeters, units === 'imperial')}` : ''}
-                </strong>
-                <span className="muted small">
-                  {stops.length} stop{stops.length > 1 ? 's' : ''}
-                  {stops.length > 10 ? ' · maps may cap at 10' : ''}
-                </span>
+              <div className="route-card">
+                <div className="route-card__top">
+                  <RouteIcon width={18} height={18} />
+                  <div className="route-card__info">
+                    <strong>
+                      Walking route
+                      {routeMeters > 0 ? ` · ${formatDistance(routeMeters, units === 'imperial')}` : ''}
+                    </strong>
+                    <span className="muted small">
+                      {stops.length} stop{stops.length > 1 ? 's' : ''}
+                      {stops.length > 10 ? ' · maps may cap at 10' : ''}
+                    </span>
+                  </div>
+                  <label className="mini-toggle">
+                    <input
+                      type="checkbox"
+                      checked={optimize}
+                      onChange={(e) => setOptimize(e.target.checked)}
+                      disabled={!userLocation}
+                    />
+                    Optimize
+                  </label>
+                </div>
+                <div className="route-card__actions">
+                  <a className="btn btn--primary" href={gUrl} target="_blank" rel="noopener noreferrer">
+                    <NavIcon width={16} height={16} /> Google Maps
+                  </a>
+                  <a className="btn btn--ghost" href={aUrl} target="_blank" rel="noopener noreferrer">
+                    Apple Maps
+                  </a>
+                </div>
               </div>
-              <label className="mini-toggle">
-                <input
-                  type="checkbox"
-                  checked={optimize}
-                  onChange={(e) => setOptimize(e.target.checked)}
-                  disabled={!userLocation}
-                />
-                Optimize
-              </label>
-            </div>
-            <div className="route-card__actions">
-              <a className="btn btn--primary" href={gUrl} target="_blank" rel="noopener noreferrer">
-                <NavIcon width={16} height={16} /> Google Maps
-              </a>
-              <a className="btn btn--ghost" href={aUrl} target="_blank" rel="noopener noreferrer">
-                Apple Maps
-              </a>
-            </div>
-          </div>
 
-          <ol className="saved-list">
-            {orderedSaved.map((s, i) => {
-              const dist = userLocation ? haversine(userLocation, s) : null
-              return (
-                <li key={s.id} className="saved-item">
-                  <span className="saved-item__index">{i + 1}</span>
-                  <button className="saved-item__main" onClick={() => goTo(s.lat, s.lng, s.id)}>
-                    <span className="saved-item__emoji" style={{ background: s.color }}>
-                      {s.emoji}
-                    </span>
-                    <span className="saved-item__text">
-                      <span className="saved-item__nameline">
-                        <span className="saved-item__name">{s.name}</span>
-                        {isInSeasonNow(s.seasonStart, s.seasonStop) && (
-                          <span className="ripe-tag">ripe</span>
-                        )}
-                      </span>
-                      <span className="muted small">
-                        {dist != null ? `${formatDistance(dist, units === 'imperial')} · ` : ''}
-                        {s.address ?? `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    className="icon-btn icon-btn--sm"
-                    aria-label={`Remove ${s.name}`}
-                    onClick={() => removeSaved(s.id)}
-                  >
-                    <TrashIcon width={18} height={18} />
-                  </button>
-                </li>
-              )
-            })}
-          </ol>
+              <ol className="saved-list">
+                {orderedSaved.map((s, i) => {
+                  const dist = userLocation ? haversine(userLocation, s) : null
+                  return (
+                    <li key={s.id} className="saved-item">
+                      <span className="saved-item__index">{i + 1}</span>
+                      <button className="saved-item__main" onClick={() => goTo(s.lat, s.lng, s.id)}>
+                        <span className="saved-item__emoji" style={{ background: s.color }}>
+                          {s.emoji}
+                        </span>
+                        <span className="saved-item__text">
+                          <span className="saved-item__nameline">
+                            <span className="saved-item__name">{s.name}</span>
+                            {ripeIds.has(s.id) && <span className="ripe-tag">ripe</span>}
+                          </span>
+                          <span className="muted small">
+                            {dist != null ? `${formatDistance(dist, units === 'imperial')} · ` : ''}
+                            {s.address ?? `${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}`}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        className="icon-btn icon-btn--sm"
+                        aria-label={`Remove ${s.name}`}
+                        onClick={() => removeSaved(s.id)}
+                      >
+                        <TrashIcon width={18} height={18} />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ol>
             </>
           )}
 

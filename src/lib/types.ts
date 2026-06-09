@@ -164,3 +164,6 @@ export const FRUITING_LABELS: Record<number, string> = {
   1: 'Unripe fruit',
   2: 'Ripe fruit',
 }
+
+/** The quality/yield rating scale (0–4), shared by all review forms. */
+export const RATINGS: Rating[] = [0, 1, 2, 3, 4]

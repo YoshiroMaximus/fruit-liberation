@@ -71,13 +71,13 @@ export function monthInSeason(m: number, start: number, stop: number): boolean {
   return start <= stop ? m >= start && m <= stop : m >= start || m <= stop
 }
 
-/** Whether a season range is active in the current local month. */
-export function isInSeasonNow(
-  start: number | null | undefined,
-  stop: number | null | undefined,
-): boolean {
-  if (start == null || stop == null) return false
-  return monthInSeason(new Date().getMonth(), start, stop)
+/** Today as a YYYY-MM-DD string in the user's LOCAL date (consistent with
+ *  monthInSeason's local month, and avoids a UTC off-by-one in date pickers). */
+export function todayISO(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
 }
 
 export const isApplePlatform = () =>

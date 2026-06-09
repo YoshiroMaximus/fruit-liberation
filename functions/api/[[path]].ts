@@ -19,13 +19,20 @@ interface Env {
 const UPSTREAM = 'https://fallingfruit.org/api/0.3'
 const DEFAULT_KEY = 'AKDJGHSD'
 
-/** Per-endpoint edge cache lifetime (seconds). 0 = never cache. */
+/**
+ * Per-endpoint edge cache lifetime (seconds). 0 = never cache.
+ * The Cache API (no enterprise cache-tags on Pages) can't be selectively
+ * purged on write, so map-data TTLs are kept short to bound how long a freshly
+ * added/edited location stays hidden from anonymous viewers. Signed-in users
+ * bypass the cache entirely (their reads carry Authorization → not cacheable),
+ * so the contributor always sees their own change immediately.
+ */
 function cacheTtl(path: string): number {
   if (path === '/types') return 86_400 // catalog rarely changes
-  if (path === '/types/counts') return 600
-  if (path === '/clusters') return 600
-  if (path === '/locations') return 300
-  if (/^\/locations\/\d+$/.test(path)) return 300
+  if (path === '/types/counts') return 120
+  if (path === '/clusters') return 120
+  if (path === '/locations') return 60
+  if (/^\/locations\/\d+$/.test(path)) return 60
   return 0
 }
 

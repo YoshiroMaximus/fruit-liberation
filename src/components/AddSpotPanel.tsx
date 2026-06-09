@@ -1,21 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Sheet from './Sheet'
 import { CloseIcon } from './icons'
 import { useStore } from '../store/useStore'
 import { getMap } from '../lib/mapRef'
 import { createLocation, uploadPhoto } from '../lib/api'
-import { ACCESS_LABELS, type FruitingStatus, type Rating } from '../lib/types'
+import { buildReview } from '../lib/review'
+import { todayISO } from '../lib/geo'
+import { ACCESS_LABELS, FRUITING_LABELS, RATINGS } from '../lib/types'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
-const FRUITING = [
-  { v: '0', label: 'Flowers' },
-  { v: '1', label: 'Unripe fruit' },
-  { v: '2', label: 'Ripe fruit' },
-]
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export default function AddSpotPanel() {
   const setPanel = useStore((s) => s.setPanel)
@@ -45,13 +41,16 @@ export default function AddSpotPanel() {
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Refs so unmount cleanup sees the current values (not a stale closure).
+  const photoUrlRef = useRef<string | null>(null)
+  const uploadedPhotoIdRef = useRef<number | null>(null)
 
   // Enter placement mode on mount; clear it on unmount.
   useEffect(() => {
     setPlacing(true)
     return () => {
       setPlacing(false)
-      if (photoPreview) URL.revokeObjectURL(photoPreview)
+      if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -81,9 +80,12 @@ export default function AddSpotPanel() {
   }
 
   const onPhoto = (file: File | null) => {
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current)
+    const url = file ? URL.createObjectURL(file) : null
+    photoUrlRef.current = url
+    uploadedPhotoIdRef.current = null // a new file must be uploaded fresh
     setPhotoFile(file)
-    setPhotoPreview(file ? URL.createObjectURL(file) : null)
+    setPhotoPreview(url)
   }
 
   const submit = async () => {
@@ -100,21 +102,23 @@ export default function AddSpotPanel() {
     try {
       let photo_ids: number[] | undefined
       if (photoFile) {
-        const p = await uploadPhoto(photoFile)
-        photo_ids = [p.id]
+        // Reuse a prior successful upload so retrying after a later failure
+        // doesn't orphan a second copy on the user's account.
+        if (uploadedPhotoIdRef.current == null) {
+          const p = await uploadPhoto(photoFile)
+          uploadedPhotoIdRef.current = p.id
+        }
+        photo_ids = [uploadedPhotoIdRef.current]
       }
-      const hasReview =
-        !!rComment.trim() || rFruiting !== '' || rQuality !== '' || rYield !== '' || !!photo_ids
-      const review = hasReview
-        ? {
-            comment: rComment.trim() || null,
-            observed_on: rObserved || todayISO(),
-            fruiting: rFruiting === '' ? null : (Number(rFruiting) as FruitingStatus),
-            quality_rating: rQuality === '' ? null : (Number(rQuality) as Rating),
-            yield_rating: rYield === '' ? null : (Number(rYield) as Rating),
-            photo_ids,
-          }
-        : undefined
+      const review =
+        buildReview({
+          comment: rComment,
+          observed_on: rObserved,
+          fruiting: rFruiting,
+          quality_rating: rQuality,
+          yield_rating: rYield,
+          photo_ids,
+        }) ?? undefined
 
       const created = await createLocation({
         lat: coords.lat,
@@ -131,8 +135,9 @@ export default function AddSpotPanel() {
       showToast('Spot added — thank you for sharing! 🌱')
       setPanel('none')
       selectLocation(created.id)
+      // Fly to the new spot; the flyTo's moveend reloads markers, and the
+      // signed-in contributor's read bypasses the edge cache, so it appears.
       setFlyTarget({ lat: created.lat, lng: created.lng, zoom: 18 })
-      getMap()?.fire('moveend') // refresh markers so the new pin appears
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add the spot. Try again.')
     } finally {
@@ -289,9 +294,9 @@ export default function AddSpotPanel() {
             <label className="sub-label">Status</label>
             <select className="field" value={rFruiting} onChange={(e) => setRFruiting(e.target.value)}>
               <option value="">—</option>
-              {FRUITING.map((f) => (
-                <option key={f.v} value={f.v}>
-                  {f.label}
+              {Object.entries(FRUITING_LABELS).map(([v, label]) => (
+                <option key={v} value={v}>
+                  {label}
                 </option>
               ))}
             </select>
@@ -312,7 +317,7 @@ export default function AddSpotPanel() {
             <label className="sub-label">Quality</label>
             <select className="field" value={rQuality} onChange={(e) => setRQuality(e.target.value)}>
               <option value="">—</option>
-              {[0, 1, 2, 3, 4].map((n) => (
+              {RATINGS.map((n) => (
                 <option key={n} value={n}>
                   {n}/4
                 </option>
@@ -323,7 +328,7 @@ export default function AddSpotPanel() {
             <label className="sub-label">Yield</label>
             <select className="field" value={rYield} onChange={(e) => setRYield(e.target.value)}>
               <option value="">—</option>
-              {[0, 1, 2, 3, 4].map((n) => (
+              {RATINGS.map((n) => (
                 <option key={n} value={n}>
                   {n}/4
                 </option>

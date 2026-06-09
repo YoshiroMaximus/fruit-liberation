@@ -273,6 +273,7 @@ export default function MapView() {
     }
 
     map.on('click', 'clusters-circle', (e: MapLayerMouseEvent) => {
+      if (useStore.getState().placing) return
       const f = e.features?.[0]
       if (!f) return
       const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
@@ -291,6 +292,7 @@ export default function MapView() {
     })
 
     map.on('click', (e: MapLayerMouseEvent) => {
+      if (useStore.getState().placing) return
       const layers = [...CLUSTER_LAYERS, ...LOCATION_LAYERS].filter((l) => map.getLayer(l))
       const hits = map.queryRenderedFeatures(e.point, { layers })
       if (!hits.length) useStore.getState().selectLocation(null)

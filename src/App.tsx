@@ -49,13 +49,16 @@ export default function App() {
   const placing = useStore((s) => s.placing)
   const user = useStore((s) => s.user)
   const showToast = useStore((s) => s.showToast)
+  const selectLocation = useStore((s) => s.selectLocation)
   const viewStatus = useStore((s) => s.viewStatus)
   const typesError = useStore((s) => s.typesError)
   const typeIndex = useStore((s) => s.typeIndex)
 
   const onAdd = () => {
-    if (user) setPanel('add')
-    else {
+    if (user) {
+      selectLocation(null) // close any open detail sheet before placing
+      setPanel('add')
+    } else {
       showToast('Sign in to add a spot')
       setPanel('account')
     }
