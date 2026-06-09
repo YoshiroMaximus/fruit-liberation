@@ -106,3 +106,12 @@ export const PinIcon = (p: SVGProps<SVGSVGElement>) => (
     <circle cx="12" cy="10" r="2.4" />
   </svg>
 )
+
+export const SlidersIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M6 3v18M12 3v18M18 3v18" />
+    <circle cx="6" cy="8" r="2.4" />
+    <circle cx="12" cy="14" r="2.4" />
+    <circle cx="18" cy="6" r="2.4" />
+  </svg>
+)

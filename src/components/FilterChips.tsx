@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { FunnelIcon } from './icons'
 import { useStore } from '../store/useStore'
 import { QUICK_PICKS } from '../lib/typeIndex'
@@ -25,8 +25,27 @@ export default function FilterChips() {
 
   const selectedSet = useMemo(() => new Set(selectedTypes), [selectedTypes])
 
+  // Fade the scroll edges (right at the start, both mid-scroll, left at the end)
+  // so the row reads as scrollable instead of hard-clipping a chip.
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const update = () => {
+      el.classList.toggle('chips--fade-left', el.scrollLeft > 4)
+      el.classList.toggle('chips--fade-right', el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [quick])
+
   return (
-    <div className="chips">
+    <div className="chips" ref={scrollerRef}>
       <button
         className={`chip chip--filter${selectedTypes.length ? ' chip--has' : ''}`}
         onClick={() => setPanel('filters')}

@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { CloseIcon } from './icons'
+import { useDragToDismiss } from '../hooks/useDragToDismiss'
 
 interface SheetProps {
   open: boolean
@@ -13,6 +14,8 @@ interface SheetProps {
 
 /** A backdrop bottom-sheet (mobile) that becomes a left rail on wide screens. */
 export default function Sheet({ open, onClose, title, subtitle, children, action }: SheetProps) {
+  const { dy, dragging, handleProps } = useDragToDismiss(onClose)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -25,8 +28,12 @@ export default function Sheet({ open, onClose, title, subtitle, children, action
   return (
     <div className="sheet-root" role="dialog" aria-modal="true">
       <div className="sheet-backdrop" onClick={onClose} />
-      <section className="sheet" onClick={(e) => e.stopPropagation()}>
-        <header className="sheet__head">
+      <section
+        className="sheet"
+        onClick={(e) => e.stopPropagation()}
+        style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dragging ? 'none' : undefined }}
+      >
+        <header className="sheet__head" {...handleProps}>
           <div className="sheet__handle" />
           <div className="sheet__titles">
             <h2 className="sheet__title">{title}</h2>

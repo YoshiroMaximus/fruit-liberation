@@ -32,8 +32,9 @@ export function locationsToGeoJSON(
         properties: {
           id: loc.id,
           name,
-          color: t?.color ?? '#5a9e4b',
+          color: t?.color ?? '#7f8a99',
           emoji: t?.emoji ?? '🌱',
+          icon: `fruit-${t?.kind ?? 'other'}`,
           saved: false,
         },
       }

@@ -7,12 +7,14 @@ import LocationSheet from './components/LocationSheet'
 import SavedPanel from './components/SavedPanel'
 import AccountPanel from './components/AccountPanel'
 import AddSpotPanel from './components/AddSpotPanel'
+import SettingsPanel from './components/SettingsPanel'
 import FirstRunLocate from './components/FirstRunLocate'
+import Legend from './components/Legend'
 import LocateButton from './components/LocateButton'
 import Toast from './components/Toast'
 import ReloadPrompt from './components/ReloadPrompt'
 import InstallPrompt from './components/InstallPrompt'
-import { BookmarkIcon, UserIcon, PlusIcon } from './components/icons'
+import { BookmarkIcon, UserIcon, PlusIcon, SlidersIcon } from './components/icons'
 import { useStore } from './store/useStore'
 import { loadTypes } from './lib/loadTypes'
 
@@ -102,12 +104,14 @@ export default function App() {
 
       <div className="rail">
         {!placing && panel !== 'add' && (
-          <button className="fab fab--accent" aria-label="Add a spot" onClick={onAdd}>
+          <button className="fab fab--add" aria-label="Add a spot" onClick={onAdd}>
             <PlusIcon />
           </button>
         )}
         <LocateButton />
       </div>
+
+      {viewStatus?.mode === 'locations' && selectedLocationId == null && !placing && <Legend />}
 
       {selectedLocationId == null && !placing && (
         <nav className="dock">
@@ -119,6 +123,14 @@ export default function App() {
             <UserIcon width={20} height={20} />
             <span>Account</span>
           </button>
+          <button
+            className="dock__btn dock__btn--icon"
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => setPanel('settings')}
+          >
+            <SlidersIcon width={20} height={20} />
+          </button>
         </nav>
       )}
 
@@ -126,6 +138,7 @@ export default function App() {
       <FilterPanel />
       <SavedPanel />
       <AccountPanel />
+      <SettingsPanel />
       {panel === 'add' && <AddSpotPanel />}
 
       <FirstRunLocate />

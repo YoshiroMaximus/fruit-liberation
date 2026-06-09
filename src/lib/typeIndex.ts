@@ -5,8 +5,11 @@ export interface IndexedType {
   /** Best display name for the active locale. */
   name: string
   scientificName: string | null
-  category: FruitType['categories'][number] | null
+  /** Specific emoji for UI lists (e.g. 🍋 for lemon). */
   emoji: string
+  /** Coarse category for marker color/icon + the legend. */
+  kind: CategoryKey
+  /** Category color (used for markers and the colored emoji tiles). */
   color: string
   /** Lower-cased haystack for search. */
   haystack: string
@@ -76,32 +79,62 @@ const EMOJI: [RegExp, string][] = [
   [/rose|hawthorn|crataegus|rosa/i, '🌹'],
 ]
 
-/* Keyword → recognizable color (overrides hashed hue). */
-const COLORS: [RegExp, string][] = [
-  [/crab\s?apple|\bapple\b|cherry|pomegranate|\bplum\b|tomato|rose|hawthorn|cranberr/i, '#e2474a'],
-  [/tangerin|mandarin|\borange\b|persimmon|apricot|kumquat/i, '#f2861e'],
-  [/lemon|lime|citrus|banana|grapefruit|yuzu/i, '#e8b923'],
-  [/grape|blackberr|mulberr|\bfig\b|elderberr|plum|sloe/i, '#7d4fa0'],
-  [/blueberr|huckleberr|bilberr/i, '#3f6fb0'],
-  [/walnut|chestnut|hazelnut|almond|acorn|pecan|hickory|\bnut\b|coconut|olive/i, '#8a6a3b'],
-  [/mushroom|fungus|fungi/i, '#b07a52'],
-  [/mint|basil|thyme|rosemary|sage|herb|avocado|pear|kiwi/i, '#5a9e4b'],
-  [/peach|nectarine|mango/i, '#f0a35e'],
-]
-
 function emojiFor(haystack: string): string {
   for (const [re, e] of EMOJI) if (re.test(haystack)) return e
   return '🌱'
 }
 
-function colorFor(haystack: string, category: string | null): string {
-  for (const [re, c] of COLORS) if (re.test(haystack)) return c
-  // Stable hashed hue as fallback.
-  let h = 0
-  for (let i = 0; i < haystack.length; i++) h = (h * 31 + haystack.charCodeAt(i)) | 0
-  const hue = Math.abs(h) % 360
-  const sat = category === 'honeybee' ? 70 : 55
-  return `hsl(${hue}, ${sat}%, 48%)`
+export type CategoryKey =
+  | 'pome'
+  | 'citrus'
+  | 'stone'
+  | 'berry'
+  | 'nut'
+  | 'herb'
+  | 'fungi'
+  | 'tropical'
+  | 'other'
+
+export interface Category {
+  key: CategoryKey
+  label: string
+  emoji: string
+  color: string
+}
+
+/** The coarse categories markers are colored/iconed by, shown in the legend. */
+export const CATEGORIES: Category[] = [
+  { key: 'pome', label: 'Apples & pears', emoji: '🍎', color: '#e2474a' },
+  { key: 'citrus', label: 'Citrus', emoji: '🍊', color: '#f2861e' },
+  { key: 'stone', label: 'Stone fruit', emoji: '🍑', color: '#ec6f9e' },
+  { key: 'berry', label: 'Berries & grapes', emoji: '🫐', color: '#7d4fa0' },
+  { key: 'nut', label: 'Nuts', emoji: '🌰', color: '#8a6a3b' },
+  { key: 'herb', label: 'Herbs & greens', emoji: '🌿', color: '#5a9e4b' },
+  { key: 'fungi', label: 'Mushrooms', emoji: '🍄', color: '#b07a52' },
+  { key: 'tropical', label: 'Other fruit', emoji: '🥑', color: '#2f9e8f' },
+  { key: 'other', label: 'Other edible', emoji: '🌱', color: '#7f8a99' },
+]
+
+const CATEGORY_BY_KEY = new Map(CATEGORIES.map((c) => [c.key, c]))
+const OTHER = CATEGORY_BY_KEY.get('other')!
+
+/* First matching rule wins. */
+const CATEGORY_RULES: [RegExp, CategoryKey][] = [
+  [/citrus|orange|lemon|lime|grapefruit|mandarin|tangerin|clementine|kumquat|yuzu|pomelo|calamondin/i, 'citrus'],
+  [/crab\s?apple|\bapple\b|malus|\bpear\b|pyrus|quince|cydonia|hawthorn|crataegus|loquat|medlar|serviceberry|rowan|sorbus/i, 'pome'],
+  [/peach|nectarine|apricot|\bplum\b|cherry|prunus|sloe|damson|greengage|almond/i, 'stone'],
+  [/berry|berries|rubus|blackberr|raspberr|mulberr|boysenberr|salmonberr|thimbleberr|blueberr|huckleberr|bilberr|strawberr|elderberr|sambucus|currant|gooseberr|ribes|grape|vitis|cranberr/i, 'berry'],
+  [/walnut|juglans|chestnut|castanea|hazelnut|filbert|corylus|pecan|hickory|carya|acorn|\boak\b|quercus|pistachio|pine ?nut|pinyon|macadamia|beech|fagus|ginkgo|\bnut\b/i, 'nut'],
+  [/mint|mentha|rosemary|sage|salvia|thyme|thymus|basil|oregano|marjoram|lavender|fennel|\bdill\b|parsley|cilantro|coriander|chive|dandelion|nettle|\bherb\b|bay laurel|laurus|nasturtium|mallow|sorrel/i, 'herb'],
+  [/mushroom|fungus|fungi|bolet|chanterelle|morel|agaricus|amanita|pleurotus/i, 'fungi'],
+  [/\bfig\b|ficus|avocado|persea|mango|banana|plantain|persimmon|diospyros|pomegranate|punica|kiwi|actinidia|guava|passion ?fruit|papaya|pineapple|\bdate\b|jujube|olive|olea|pawpaw|asimina|prickly pear|opuntia|carob/i, 'tropical'],
+]
+
+function classify(haystack: string): Category {
+  for (const [re, key] of CATEGORY_RULES) {
+    if (re.test(haystack)) return CATEGORY_BY_KEY.get(key)!
+  }
+  return OTHER
 }
 
 function resolveName(t: FruitType, locale: string): string {
@@ -130,14 +163,14 @@ export function buildTypeIndex(types: FruitType[], locale = 'en'): TypeIndex {
       ...(t.scientific_names || []),
     ]
     const haystack = [name, scientificName, ...allNames].filter(Boolean).join(' ').toLowerCase()
-    const category = t.categories?.[0] ?? null
+    const cat = classify(haystack)
     const idx: IndexedType = {
       id: t.id,
       name,
       scientificName,
-      category,
       emoji: emojiFor(haystack),
-      color: colorFor(haystack, category),
+      kind: cat.key,
+      color: cat.color,
       haystack,
     }
     all.push(idx)

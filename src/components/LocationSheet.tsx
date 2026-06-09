@@ -14,6 +14,7 @@ import {
   todayISO,
 } from '../lib/geo'
 import { BookmarkIcon, CloseIcon, NavIcon, ShareIcon } from './icons'
+import { useDragToDismiss } from '../hooks/useDragToDismiss'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
@@ -41,6 +42,16 @@ export default function LocationSheet() {
   const [nComment, setNComment] = useState('')
   const [posting, setPosting] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
+
+  const { dy, dragging, handleProps } = useDragToDismiss(() => selectLocation(null))
+
+  // Esc closes the sheet (desktop / keyboard).
+  useEffect(() => {
+    if (id == null) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && selectLocation(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [id, selectLocation])
 
   useEffect(() => {
     // Reset the inline note form whenever the target location changes, so a
@@ -160,7 +171,13 @@ export default function LocationSheet() {
   const aUrl = appleMapsUrl(userLocation, stops, 'w')
 
   return (
-    <div className="locsheet" role="dialog" aria-label="Location details">
+    <div
+      className="locsheet"
+      role="dialog"
+      aria-label="Location details"
+      style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dragging ? 'none' : undefined }}
+    >
+      <div className="locsheet__handle" {...handleProps} />
       <button className="locsheet__close icon-btn" aria-label="Close" onClick={() => selectLocation(null)}>
         <CloseIcon />
       </button>

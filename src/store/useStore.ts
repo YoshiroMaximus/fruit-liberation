@@ -28,7 +28,7 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark'
 }
 
-export type Panel = 'none' | 'filters' | 'saved' | 'account' | 'add'
+export type Panel = 'none' | 'filters' | 'saved' | 'account' | 'add' | 'settings'
 
 interface PersistedAuth {
   token: AuthToken | null

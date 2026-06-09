@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl, {
   type GeoJSONSource,
   type LayerSpecification,
+  type MapGeoJSONFeature,
   type MapLayerMouseEvent,
 } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -21,16 +22,48 @@ import {
 } from '../lib/mapData'
 import { useStore } from '../store/useStore'
 import { setMap } from '../lib/mapRef'
+import { CATEGORIES } from '../lib/typeIndex'
 
 const LOCATION_LAYERS = [
   'locations-saved',
   'locations-selected',
-  'locations-circle',
+  'locations-icon',
   'locations-label',
 ]
 const CLUSTER_LAYERS = ['clusters-circle', 'clusters-count']
 
+// Render each category as a colored circle with its emoji, registered as a map
+// image so markers can be drawn as GPU symbols (decodable + colorblind-friendly).
+function makeCategoryIcons(map: maplibregl.Map) {
+  const size = 44
+  const dpr = 2
+  for (const cat of CATEGORIES) {
+    const id = `fruit-${cat.key}`
+    if (map.hasImage(id)) continue
+    const canvas = document.createElement('canvas')
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    ctx.scale(dpr, dpr)
+    const r = size / 2 - 3
+    ctx.beginPath()
+    ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2)
+    ctx.fillStyle = cat.color
+    ctx.fill()
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+    ctx.stroke()
+    ctx.font = `${Math.round(size * 0.5)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(cat.emoji, size / 2, size / 2 + Math.round(size * 0.04))
+    map.addImage(id, ctx.getImageData(0, 0, size * dpr, size * dpr), { pixelRatio: dpr })
+  }
+}
+
 function addSourcesAndLayers(map: maplibregl.Map) {
+  makeCategoryIcons(map)
   if (!map.getSource('clusters')) {
     map.addSource('clusters', { type: 'geojson', data: EMPTY_FC })
   }
@@ -82,9 +115,9 @@ function addSourcesAndLayers(map: maplibregl.Map) {
       source: 'locations',
       filter: ['in', ['get', 'id'], ['literal', []]],
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 8, 19, 14],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 11, 16, 16, 19, 22],
         'circle-color': 'rgba(0,0,0,0)',
-        'circle-stroke-width': 3,
+        'circle-stroke-width': 3.5,
         'circle-stroke-color': '#e8b923',
       },
     })
@@ -96,24 +129,23 @@ function addSourcesAndLayers(map: maplibregl.Map) {
       source: 'locations',
       filter: ['==', ['get', 'id'], -1],
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 11, 19, 18],
-        'circle-color': 'rgba(31,61,43,0.12)',
-        'circle-stroke-width': 3,
-        'circle-stroke-color': '#1f3d2b',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 13, 16, 19, 19, 25],
+        'circle-color': 'rgba(31,61,43,0.10)',
+        'circle-stroke-width': 3.5,
+        'circle-stroke-color': '#1f6b3a',
       },
     })
   }
-  if (!map.getLayer('locations-circle')) {
+  if (!map.getLayer('locations-icon')) {
     map.addLayer({
-      id: 'locations-circle',
-      type: 'circle',
+      id: 'locations-icon',
+      type: 'symbol',
       source: 'locations',
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3.5, 16, 7, 19, 10],
-        'circle-color': ['get', 'color'],
-        'circle-opacity': 0.96,
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': 'rgba(255,255,255,0.92)',
+      layout: {
+        'icon-image': ['get', 'icon'],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.42, 16, 0.62, 19, 0.85],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
       },
     })
   }
@@ -129,7 +161,7 @@ function addSourcesAndLayers(map: maplibregl.Map) {
         'text-field': ['get', 'name'],
         'text-font': ['Noto Sans Regular'],
         'text-size': 11,
-        'text-offset': [0, 1.1],
+        'text-offset': [0, 1.5],
         'text-anchor': 'top',
         'text-optional': true,
         'text-allow-overlap': false,
@@ -143,6 +175,18 @@ function addSourcesAndLayers(map: maplibregl.Map) {
       },
     })
   }
+}
+
+// Make marker labels legible on whichever basemap is active.
+function applyLabelTheme(map: maplibregl.Map, darkMap: boolean) {
+  if (!map.getLayer('locations-label')) return
+  map.setPaintProperty('locations-label', 'text-color', darkMap ? '#f1f3f4' : '#23271d')
+  map.setPaintProperty(
+    'locations-label',
+    'text-halo-color',
+    darkMap ? 'rgba(12,15,18,0.9)' : 'rgba(255,255,255,0.95)',
+  )
+  map.setPaintProperty('locations-label', 'text-halo-width', 1.8)
 }
 
 function setLayerVisibility(map: maplibregl.Map, ids: string[], visible: boolean) {
@@ -321,6 +365,11 @@ export default function MapView() {
       if (!map.getSource('locations')) {
         addSourcesAndLayers(map)
         declutterBasemap(map)
+        const st = useStore.getState()
+        applyLabelTheme(
+          map,
+          resolveBasemap(st.settings.basemap, st.resolvedTheme === 'dark') === 'dark',
+        )
         setReady(true)
         refresh(true)
       }
@@ -352,42 +401,77 @@ export default function MapView() {
     })
 
     // ---- interactions ----
-    for (const layer of ['clusters-circle', 'locations-circle']) {
+    for (const layer of ['clusters-circle', 'locations-icon']) {
       map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'))
       map.on('mouseleave', layer, () => (map.getCanvas().style.cursor = ''))
     }
 
-    map.on('click', 'clusters-circle', (e: MapLayerMouseEvent) => {
-      if (useStore.getState().placing) return
-      const f = e.features?.[0]
-      if (!f) return
-      const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
-      map.easeTo({ center: [lng, lat], zoom: Math.min(19, map.getZoom() + 2.5) })
-    })
-
-    map.on('click', 'locations-circle', (e: MapLayerMouseEvent) => {
-      if (useStore.getState().placing) return
-      const f = e.features?.[0]
-      if (!f) return
-      const id = f.properties?.id as number
-      const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
-      useStore.getState().selectLocation(id)
-      useStore.getState().setPanel('none')
-      map.easeTo({ center: [lng, lat], offset: [0, -130], duration: 450 })
-    })
+    // Pick the feature nearest the tap within a padded box, so small dots are
+    // easy to hit on touch.
+    const nearest = (feats: MapGeoJSONFeature[], pt: { x: number; y: number }) => {
+      let best = feats[0]
+      let bestD = Infinity
+      for (const f of feats) {
+        const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
+        const p = map.project([lng, lat])
+        const d = Math.hypot(p.x - pt.x, p.y - pt.y)
+        if (d < bestD) {
+          bestD = d
+          best = f
+        }
+      }
+      return best
+    }
 
     map.on('click', (e: MapLayerMouseEvent) => {
       if (useStore.getState().placing) return
-      const layers = [...CLUSTER_LAYERS, ...LOCATION_LAYERS].filter((l) => map.getLayer(l))
-      const hits = map.queryRenderedFeatures(e.point, { layers })
-      if (!hits.length) useStore.getState().selectLocation(null)
+      const pad = 14
+      const box: [[number, number], [number, number]] = [
+        [e.point.x - pad, e.point.y - pad],
+        [e.point.x + pad, e.point.y + pad],
+      ]
+      if (map.getLayer('clusters-circle')) {
+        const cl = map.queryRenderedFeatures(box, { layers: ['clusters-circle'] })
+        if (cl.length) {
+          const [lng, lat] = (nearest(cl, e.point).geometry as GeoJSON.Point).coordinates
+          map.easeTo({ center: [lng, lat], zoom: Math.min(19, map.getZoom() + 2.5) })
+          return
+        }
+      }
+      if (map.getLayer('locations-icon')) {
+        const loc = map.queryRenderedFeatures(box, { layers: ['locations-icon'] })
+        if (loc.length) {
+          const f = nearest(loc, e.point)
+          const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
+          useStore.getState().selectLocation(f.properties?.id as number)
+          useStore.getState().setPanel('none')
+          map.easeTo({ center: [lng, lat], offset: [0, -130], duration: 450 })
+          return
+        }
+      }
+      useStore.getState().selectLocation(null)
     })
 
+    // Keep the GL canvas matched to its container. On iOS standalone (PWA), the
+    // safe-area viewport settles a moment after launch/rotation; if the canvas
+    // was sized first, the page background shows as grey safe-area bars — so we
+    // resize on container changes and the iOS-specific events.
     const onResize = () => map.resize()
     window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    window.addEventListener('pageshow', onResize)
+    const ro = new ResizeObserver(() => map.resize())
+    if (containerRef.current) ro.observe(containerRef.current)
+    const settle1 = window.setTimeout(onResize, 250)
+    const settle2 = window.setTimeout(onResize, 800)
 
     return () => {
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('orientationchange', onResize)
+      window.removeEventListener('pageshow', onResize)
+      ro.disconnect()
+      window.clearTimeout(settle1)
+      window.clearTimeout(settle2)
       window.clearTimeout(debounceRef.current)
       abortRef.current?.abort()
       map.remove()
