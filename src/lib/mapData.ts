@@ -1,6 +1,6 @@
 import type { FeatureCollection, Feature, Point } from 'geojson'
 import type { Cluster, ListLocation } from './types'
-import type { TypeIndex } from './typeIndex'
+import { iconIdFor, type TypeIndex } from './typeIndex'
 
 export function clustersToGeoJSON(clusters: Cluster[]): FeatureCollection<Point> {
   return {
@@ -25,18 +25,13 @@ export function locationsToGeoJSON(
       const primary = loc.type_ids?.[0]
       const t = primary != null ? typeIndex?.byId.get(primary) : undefined
       const name = t?.name ?? (loc.type_ids?.length ? 'Edible plant' : 'Unknown')
+      // Only id (click + ring filters), name (label), and icon (symbol) are read
+      // by the map layers — color/emoji are baked into the icon image.
       return {
         type: 'Feature',
         id: loc.id,
         geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] },
-        properties: {
-          id: loc.id,
-          name,
-          color: t?.color ?? '#7f8a99',
-          emoji: t?.emoji ?? '🌱',
-          icon: `fruit-${t?.kind ?? 'other'}`,
-          saved: false,
-        },
+        properties: { id: loc.id, name, icon: iconIdFor(t?.kind ?? 'other') },
       }
     }),
   }

@@ -2,13 +2,45 @@ import Sheet from './Sheet'
 import { useStore } from '../store/useStore'
 import type { BasemapChoice } from '../config'
 
-const BASEMAP_OPTIONS: { id: BasemapChoice; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'liberty', label: 'Field' },
-  { id: 'bright', label: 'Bright' },
-  { id: 'positron', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
+const BASEMAP_OPTIONS: { value: BasemapChoice; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'liberty', label: 'Field' },
+  { value: 'bright', label: 'Bright' },
+  { value: 'positron', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
 ]
+
+/** A labelled segmented control (one choice from a small set). */
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: T
+  options: { value: T; label: string }[]
+  onChange: (value: T) => void
+}) {
+  return (
+    <div className="setting-seg">
+      <span className="setting-seg__label">{label}</span>
+      <div className="seg" role="radiogroup" aria-label={label}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            role="radio"
+            aria-checked={value === o.value}
+            className={`seg__btn${value === o.value ? ' seg__btn--on' : ''}`}
+            onClick={() => onChange(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function SettingsPanel() {
   const panel = useStore((s) => s.panel)
@@ -37,50 +69,33 @@ export default function SettingsPanel() {
           />
         </label>
 
-        <div className="setting-seg">
-          <span className="setting-seg__label">Distance</span>
-          <div className="seg">
-            {(['imperial', 'metric'] as const).map((u) => (
-              <button
-                key={u}
-                className={`seg__btn${settings.units === u ? ' seg__btn--on' : ''}`}
-                onClick={() => setSettings({ units: u })}
-              >
-                {u === 'imperial' ? 'mi / ft' : 'km / m'}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Segmented
+          label="Distance"
+          value={settings.units}
+          options={[
+            { value: 'imperial', label: 'mi / ft' },
+            { value: 'metric', label: 'km / m' },
+          ]}
+          onChange={(units) => setSettings({ units })}
+        />
 
-        <div className="setting-seg">
-          <span className="setting-seg__label">Map style</span>
-          <div className="seg">
-            {BASEMAP_OPTIONS.map((b) => (
-              <button
-                key={b.id}
-                className={`seg__btn${settings.basemap === b.id ? ' seg__btn--on' : ''}`}
-                onClick={() => setSettings({ basemap: b.id })}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Segmented
+          label="Map style"
+          value={settings.basemap}
+          options={BASEMAP_OPTIONS}
+          onChange={(basemap) => setSettings({ basemap })}
+        />
 
-        <div className="setting-seg">
-          <span className="setting-seg__label">Theme</span>
-          <div className="seg">
-            {(['system', 'light', 'dark'] as const).map((t) => (
-              <button
-                key={t}
-                className={`seg__btn${settings.theme === t ? ' seg__btn--on' : ''}`}
-                onClick={() => setSettings({ theme: t })}
-              >
-                {t[0].toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Segmented
+          label="Theme"
+          value={settings.theme}
+          options={[
+            { value: 'system', label: 'System' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+          onChange={(theme) => setSettings({ theme })}
+        />
       </div>
     </Sheet>
   )

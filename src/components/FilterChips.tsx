@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { FunnelIcon } from './icons'
 import { useStore } from '../store/useStore'
-import { QUICK_PICKS } from '../lib/typeIndex'
+import { FALLBACK, QUICK_PICKS } from '../lib/typeIndex'
 
 export default function FilterChips() {
   const typeIndex = useStore((s) => s.typeIndex)
@@ -17,7 +17,7 @@ export default function FilterChips() {
     return [...QUICK_PICKS]
       .map((kw) => {
         const ids = map.get(kw) ?? []
-        const emoji = ids.length ? typeIndex.byId.get(ids[0])?.emoji ?? '🌱' : '🌱'
+        const emoji = (ids.length ? typeIndex.byId.get(ids[0])?.emoji : null) ?? FALLBACK.emoji
         return { kw, ids, emoji }
       })
       .filter((c) => c.ids.length > 0)

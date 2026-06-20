@@ -22,7 +22,7 @@ import {
 } from '../lib/mapData'
 import { useStore } from '../store/useStore'
 import { setMap } from '../lib/mapRef'
-import { CATEGORIES } from '../lib/typeIndex'
+import { CATEGORIES, iconIdFor } from '../lib/typeIndex'
 
 const LOCATION_LAYERS = [
   'locations-saved',
@@ -38,7 +38,7 @@ function makeCategoryIcons(map: maplibregl.Map) {
   const size = 44
   const dpr = 2
   for (const cat of CATEGORIES) {
-    const id = `fruit-${cat.key}`
+    const id = iconIdFor(cat.key)
     if (map.hasImage(id)) continue
     const canvas = document.createElement('canvas')
     canvas.width = size * dpr
@@ -143,9 +143,12 @@ function addSourcesAndLayers(map: maplibregl.Map) {
       source: 'locations',
       layout: {
         'icon-image': ['get', 'icon'],
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 12, 0.42, 16, 0.62, 19, 0.85],
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 16, 0.54, 19, 0.78],
+        // Let MapLibre thin dense blocks instead of drawing hundreds of
+        // overlapping markers. More locations naturally appear as users zoom.
+        'icon-allow-overlap': false,
+        'icon-ignore-placement': false,
+        'icon-padding': 3,
       },
     })
   }
@@ -457,9 +460,15 @@ export default function MapView() {
     // was sized first, the page background shows as grey safe-area bars — so we
     // resize on container changes and the iOS-specific events.
     const onResize = () => map.resize()
+    const onOnline = () => {
+      forceRef.current = true
+      refresh(true)
+    }
     window.addEventListener('resize', onResize)
     window.addEventListener('orientationchange', onResize)
     window.addEventListener('pageshow', onResize)
+    window.addEventListener('online', onOnline)
+    window.visualViewport?.addEventListener('resize', onResize)
     const ro = new ResizeObserver(() => map.resize())
     if (containerRef.current) ro.observe(containerRef.current)
     const settle1 = window.setTimeout(onResize, 250)
@@ -469,6 +478,8 @@ export default function MapView() {
       window.removeEventListener('resize', onResize)
       window.removeEventListener('orientationchange', onResize)
       window.removeEventListener('pageshow', onResize)
+      window.removeEventListener('online', onOnline)
+      window.visualViewport?.removeEventListener('resize', onResize)
       ro.disconnect()
       window.clearTimeout(settle1)
       window.clearTimeout(settle2)

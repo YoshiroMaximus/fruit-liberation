@@ -34,7 +34,7 @@ function useTheme() {
       setResolvedTheme(resolved)
       root
         .querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', resolved === 'dark' ? '#202124' : '#1f6b3a')
+        ?.setAttribute('content', '#1f3d2b')
     }
     apply()
     if (theme === 'system') {
@@ -75,8 +75,8 @@ export default function App() {
 
   const status = viewStatus
     ? viewStatus.mode === 'clusters'
-      ? `${viewStatus.count.toLocaleString()} nearby — zoom in`
-      : `${viewStatus.count.toLocaleString()} spot${viewStatus.count === 1 ? '' : 's'}${
+      ? `${viewStatus.count.toLocaleString()} nearby · zoom in`
+      : `${viewStatus.count.toLocaleString()} spot${viewStatus.count === 1 ? '' : 's'} in view${
           viewStatus.truncated ? ' · zoom in for all' : ''
         }`
     : null
@@ -89,11 +89,14 @@ export default function App() {
       <div className="topbar">
         <SearchBar />
         <FilterChips />
-        {status && <div className="statuspill">{status}</div>}
         {typesError && !typeIndex && (
           <div className="statuspill statuspill--err">{typesError}</div>
         )}
       </div>
+
+      {status && selectedLocationId == null && !placing && (
+        <div className="viewcount">{status}</div>
+      )}
 
       {placing && (
         <div className="crosshair" aria-hidden>

@@ -7,6 +7,7 @@ interface BIPEvent extends Event {
 }
 
 const DISMISS_KEY = 'fl.install.dismissed'
+const DISMISS_MS = 1000 * 60 * 60 * 24 * 30
 
 function isStandalone() {
   return (
@@ -15,13 +16,19 @@ function isStandalone() {
   )
 }
 
-/** iOS Safari (incl. iPadOS, which masquerades as Macintosh + touch). Excludes
- *  Chrome/Firefox/Edge on iOS, which can't add to the home screen. */
-function isIosSafari() {
+/** iOS/iPadOS, including iPads that identify as Macintosh. */
+function isIos() {
   const ua = navigator.userAgent
-  const ios = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document)
-  const realSafari = /WebKit/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)
-  return ios && realSafari
+  return /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+}
+
+function wasRecentlyDismissed() {
+  try {
+    const dismissedAt = Number(localStorage.getItem(DISMISS_KEY))
+    return Number.isFinite(dismissedAt) && Date.now() - dismissedAt < DISMISS_MS
+  } catch {
+    return false
+  }
 }
 
 const ShareBox = () => (
@@ -36,23 +43,36 @@ const ShareBox = () => (
 export default function InstallPrompt() {
   const [evt, setEvt] = useState<BIPEvent | null>(null)
   const [ios, setIos] = useState(false)
-  const [hidden, setHidden] = useState(() => localStorage.getItem(DISMISS_KEY) === '1')
+  const [hidden, setHidden] = useState(wasRecentlyDismissed)
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault()
       setEvt(e as BIPEvent)
     }
+    const installed = () => {
+      setEvt(null)
+      setIos(false)
+      setHidden(true)
+    }
     window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', installed)
     // iOS never fires beforeinstallprompt → show a manual hint instead.
-    if (!isStandalone() && isIosSafari()) setIos(true)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    if (!isStandalone() && isIos()) setIos(true)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', installed)
+    }
   }, [])
 
   if (hidden) return null
 
   const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, '1')
+    try {
+      localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    } catch {
+      // Storage can be unavailable in private browsing; hiding for this session is enough.
+    }
     setHidden(true)
   }
 

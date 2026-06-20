@@ -118,6 +118,11 @@ export const CATEGORIES: Category[] = [
 const CATEGORY_BY_KEY = new Map(CATEGORIES.map((c) => [c.key, c]))
 const OTHER = CATEGORY_BY_KEY.get('other')!
 
+/** Fallback category (single source of the color/emoji for uncatalogued types). */
+export const FALLBACK = OTHER
+/** Map-image id for a category's marker icon (must match makeCategoryIcons). */
+export const iconIdFor = (kind: CategoryKey) => `fruit-${kind}`
+
 /* First matching rule wins. */
 const CATEGORY_RULES: [RegExp, CategoryKey][] = [
   [/citrus|orange|lemon|lime|grapefruit|mandarin|tangerin|clementine|kumquat|yuzu|pomelo|calamondin/i, 'citrus'],

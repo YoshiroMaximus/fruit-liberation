@@ -15,6 +15,7 @@ import {
 } from '../lib/geo'
 import { BookmarkIcon, CloseIcon, NavIcon, ShareIcon } from './icons'
 import { useDragToDismiss } from '../hooks/useDragToDismiss'
+import { FALLBACK } from '../lib/typeIndex'
 
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
@@ -43,7 +44,7 @@ export default function LocationSheet() {
   const [posting, setPosting] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
 
-  const { dy, dragging, handleProps } = useDragToDismiss(() => selectLocation(null))
+  const { sheetRef, handleProps } = useDragToDismiss<HTMLDivElement>(() => selectLocation(null))
 
   // Esc closes the sheet (desktop / keyboard).
   useEffect(() => {
@@ -111,8 +112,8 @@ export default function LocationSheet() {
       lat: loc.lat,
       lng: loc.lng,
       name: indexed?.name ?? names[0] ?? 'Edible plant',
-      emoji: indexed?.emoji ?? '🌱',
-      color: indexed?.color ?? '#5a9e4b',
+      emoji: indexed?.emoji ?? FALLBACK.emoji,
+      color: indexed?.color ?? FALLBACK.color,
       typeIds: loc.type_ids,
       address: loc.address,
       seasonStart: loc.season_start,
@@ -154,7 +155,7 @@ export default function LocationSheet() {
   const onShare = async () => {
     if (!loc) return
     const url = `https://fallingfruit.org/locations/${loc.id}`
-    const title = `${indexed?.emoji ?? '🌱'} ${indexed?.name ?? 'Edible plant'} on Fruit Liberation`
+    const title = `${indexed?.emoji ?? FALLBACK.emoji} ${indexed?.name ?? 'Edible plant'} on Fruit Liberation`
     try {
       if (navigator.share) await navigator.share({ title, url })
       else {
@@ -171,12 +172,7 @@ export default function LocationSheet() {
   const aUrl = appleMapsUrl(userLocation, stops, 'w')
 
   return (
-    <div
-      className="locsheet"
-      role="dialog"
-      aria-label="Location details"
-      style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dragging ? 'none' : undefined }}
-    >
+    <div ref={sheetRef} className="locsheet" role="dialog" aria-label="Location details">
       <div className="locsheet__handle" {...handleProps} />
       <button className="locsheet__close icon-btn" aria-label="Close" onClick={() => selectLocation(null)}>
         <CloseIcon />
@@ -188,8 +184,8 @@ export default function LocationSheet() {
       {loc && (
         <>
           <div className="locsheet__head">
-            <span className="locsheet__emoji" style={{ background: indexed?.color ?? '#5a9e4b' }}>
-              {indexed?.emoji ?? '🌱'}
+            <span className="locsheet__emoji" style={{ background: indexed?.color ?? FALLBACK.color }}>
+              {indexed?.emoji ?? FALLBACK.emoji}
             </span>
             <div className="locsheet__title-wrap">
               <h2 className="locsheet__title">{names[0] ?? 'Edible plant'}</h2>

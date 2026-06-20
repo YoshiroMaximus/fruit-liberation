@@ -14,7 +14,7 @@ interface SheetProps {
 
 /** A backdrop bottom-sheet (mobile) that becomes a left rail on wide screens. */
 export default function Sheet({ open, onClose, title, subtitle, children, action }: SheetProps) {
-  const { dy, dragging, handleProps } = useDragToDismiss(onClose)
+  const { sheetRef, handleProps } = useDragToDismiss<HTMLElement>(onClose)
 
   useEffect(() => {
     if (!open) return
@@ -28,11 +28,7 @@ export default function Sheet({ open, onClose, title, subtitle, children, action
   return (
     <div className="sheet-root" role="dialog" aria-modal="true">
       <div className="sheet-backdrop" onClick={onClose} />
-      <section
-        className="sheet"
-        onClick={(e) => e.stopPropagation()}
-        style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dragging ? 'none' : undefined }}
-      >
+      <section ref={sheetRef} className="sheet" onClick={(e) => e.stopPropagation()}>
         <header className="sheet__head" {...handleProps}>
           <div className="sheet__handle" />
           <div className="sheet__titles">

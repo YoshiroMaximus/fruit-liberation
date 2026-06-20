@@ -16,8 +16,9 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+        includeManifestIcons: false,
         manifest: {
+          id: '/',
           name: 'Fruit Liberation',
           short_name: 'Fruit Lib',
           description:
@@ -25,7 +26,7 @@ export default defineConfig(({ mode }) => {
           theme_color: '#1f3d2b',
           background_color: '#0f1511',
           display: 'standalone',
-          orientation: 'portrait',
+          display_override: ['fullscreen', 'standalone'],
           scope: '/',
           start_url: '/',
           categories: ['food', 'navigation', 'lifestyle'],
@@ -44,6 +45,24 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'google-font-stylesheets',
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: ({ url }) => url.origin === 'https://fonts.gstatic.com',
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-font-files',
+                expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               // Basemap vector tiles, glyphs, sprites (OpenFreeMap or MapTiler)
               urlPattern: ({ url }) =>
@@ -111,6 +130,21 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'es2021',
       sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('/node_modules/maplibre-gl/')) return 'maplibre'
+            if (
+              id.includes('/node_modules/react/') ||
+              id.includes('/node_modules/react-dom/') ||
+              id.includes('/node_modules/scheduler/')
+            ) {
+              return 'react'
+            }
+            if (id.includes('/node_modules/zustand/')) return 'state'
+          },
+        },
+      },
     },
   }
 })

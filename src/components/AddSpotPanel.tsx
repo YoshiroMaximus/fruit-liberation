@@ -7,6 +7,7 @@ import { createLocation, uploadPhoto } from '../lib/api'
 import { buildReview } from '../lib/review'
 import { todayISO } from '../lib/geo'
 import { ACCESS_LABELS, FRUITING_LABELS, RATINGS } from '../lib/types'
+import { FALLBACK } from '../lib/typeIndex'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -189,8 +190,8 @@ export default function AddSpotPanel() {
                   className="schip"
                   onClick={() => setTypes((p) => p.filter((x) => x !== id))}
                 >
-                  <span className="schip__emoji" style={{ background: t?.color ?? '#5a9e4b' }}>
-                    {t?.emoji ?? '🌱'}
+                  <span className="schip__emoji" style={{ background: t?.color ?? FALLBACK.color }}>
+                    {t?.emoji ?? FALLBACK.emoji}
                   </span>
                   {t?.name ?? `#${id}`}
                   <CloseIcon width={13} height={13} />
